@@ -1,0 +1,37 @@
+clc; clear; close all;
+% A.Babaei
+% Time 10:45 , Date 16/8/2024
+%% music_spectrum
+function [P_music, theta_scan] = music_spectrum(Rx, num_signals, num_sensors, theta_range)
+    % Rx: Matrice of Covariance (M x M)
+    % num_signals: Number of signals
+    % num_sensors: Number of sensors (M)
+    % theta_range: Range of angles to scan (e.g., -90:0.1:90)
+
+    % Eigenvalue Decomposition
+    [U, D] = eig(Rx);
+    [~, idx] = sort(diag(D), 'descend');
+    U = U(:, idx);
+
+    % Signal and noise subspace
+    Us = U(:, 1:num_signals);    % Signal subspace
+    Un = U(:, num_signals+1:end); % Noise subspace
+
+    % Scan over the angle range
+    P_music = zeros(size(theta_range));
+    for i = 1:length(theta_range)
+        theta = theta_range(i);
+        a_theta = steering_vector(num_sensors, theta);
+        P_music(i) = 1 / abs(a_theta' * (Un * Un') * a_theta);
+    end
+
+    % Normalize the MUSIC spectrum
+    P_music = 10*log10(P_music / max(P_music));
+end
+
+function a_theta = steering_vector(num_sensors, theta)
+    % Create steering vector for uniform linear array (ULA)
+    d = 0.5; % Normalized element spacing (in terms of wavelength)
+    k = -pi * sin(deg2rad(theta)); % Wavenumber
+    a_theta = exp(1j * k * (0:num_sensors-1) * d).';
+end
